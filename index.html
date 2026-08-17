@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>EXP ↔ AVL 換料工具 (BOM Change Tool)</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --line:#dfe4ec; --ink:#1f2733; --ink2:#5b6676;
+  --accent:#2f5597; --accent2:#e8eef8;
+  --ok:#1e7d4f; --okbg:#e8f6ee; --warn:#9a6400; --warnbg:#fff5e0; --keep:#8a5a3c; --keepbg:#fbeee6;
+  --err:#b3261e; --errbg:#fdecea;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.55 "Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",Arial,sans-serif}
+.wrap{max-width:1460px;margin:0 auto;padding:22px 20px 60px}
+h1{font-size:21px;margin:0 0 4px}
+h2{font-size:15px;margin:0;display:flex;align-items:center;gap:8px}
+.sub{color:var(--ink2);font-size:13px;margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;
+  box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.card>header{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+  justify-content:space-between;gap:12px}
+.card>.body{padding:16px}
+.step{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;
+  align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 auto}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.drop{border:2px dashed var(--line);border-radius:9px;padding:18px;text-align:center;cursor:pointer;
+  transition:.15s;background:#fbfcfe}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent2)}
+.drop .t{font-weight:600;margin-bottom:3px}
+.drop .h{color:var(--ink2);font-size:12.5px}
+.drop.done{border-style:solid;border-color:var(--ok);background:var(--okbg)}
+.fi{margin-top:9px;font-size:12.5px;color:var(--ink2);text-align:left;white-space:pre-wrap;
+  font-family:Consolas,"Courier New",monospace}
+button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:7px;
+  padding:7px 13px;cursor:pointer;transition:.13s}
+button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;padding:9px 20px}
+button.primary:hover:not(:disabled){background:#26477f;color:#fff}
+button.sm{padding:4px 9px;font-size:12.5px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+label.f{display:block;font-size:12.5px;color:var(--ink2);margin-bottom:4px;font-weight:600}
+input[type=text]{font:inherit;border:1px solid var(--line);border-radius:6px;padding:6px 9px;width:100%}
+input[type=text]:focus{outline:2px solid var(--accent2);border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+th{background:#eef2f8;font-weight:600;position:sticky;top:0;z-index:2}
+td input{border:1px solid transparent;background:transparent;font:inherit;width:100%;padding:2px 3px;border-radius:4px}
+td input:focus{border-color:var(--accent);background:#fff;outline:none}
+.tw{max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+details{border:1px solid var(--line);border-radius:8px;margin-bottom:12px;background:#fbfcfe}
+details>summary{padding:9px 13px;cursor:pointer;font-weight:600;font-size:13.5px}
+details[open]>summary{border-bottom:1px solid var(--line)}
+details .in{padding:13px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:11px;margin-bottom:15px}
+.tile{border:1px solid var(--line);border-radius:9px;padding:11px 13px;background:#fbfcfe}
+.tile .n{font-size:23px;font-weight:700;line-height:1.15}
+.tile .l{font-size:12px;color:var(--ink2);margin-top:2px}
+.tile.ok .n{color:var(--ok)} .tile.warn .n{color:var(--warn)} .tile.keep .n{color:var(--keep)}
+.pill{display:inline-block;padding:1px 8px;border-radius:11px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--okbg);color:var(--ok)} .pill.warn{background:var(--warnbg);color:var(--warn)}
+.pill.keep{background:var(--keepbg);color:var(--keep)}
+tr.warn td{background:#fffdf6} tr.keep td{background:#fdf7f4}
+#tRes th,#tRes td{white-space:nowrap}
+#tRes th:nth-child(6),#tRes td:nth-child(6),#tRes th:nth-child(8),#tRes td:nth-child(8),
+#tRes th:nth-child(13),#tRes td:nth-child(13),#tRes th:nth-child(14),#tRes td:nth-child(14){white-space:normal}
+#tRes td:nth-child(13),#tRes td:nth-child(14){min-width:170px}
+.note{border-left:3px solid var(--accent);background:var(--accent2);padding:9px 12px;border-radius:0 7px 7px 0;
+  font-size:12.5px;margin-bottom:12px}
+.note.bad{border-color:var(--err);background:var(--errbg)}
+.note.good{border-color:var(--ok);background:var(--okbg)}
+#log{font-family:Consolas,"Courier New",monospace;font-size:12px;background:#1f2733;color:#d6dde8;
+  padding:11px;border-radius:8px;max-height:190px;overflow:auto;white-space:pre-wrap}
+.mono{font-family:Consolas,"Courier New",monospace}
+.hide{display:none!important}
+.filters{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:11px}
+select{font:inherit;border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:#fff}
+.cnt{color:var(--ink2);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>EXP ↔ AVL 換料工具</h1>
+  <p class="sub">匯入 OrCAD 匯出的 .EXP 與 AVL 元件庫 (.xlsx / .csv)，依 Value + PCB Footprint 比對後回填 R / C / L / 磁珠料號，輸出可直接匯回 OrCAD 的 EXP 與比對報告。全程在瀏覽器本機執行，不上傳任何檔案。</p>
+
+  <!-- STEP 1 -->
+  <div class="card">
+    <header><h2><span class="step">1</span>匯入檔案</h2><span class="cnt" id="s1hint">兩個檔案都選好後才能執行</span></header>
+    <div class="body">
+      <div class="grid2">
+        <div>
+          <div class="drop" id="dzExp">
+            <div class="t">OrCAD 匯出的 .EXP</div>
+            <div class="h">點擊選擇或拖曳檔案到此 · 自動判讀 GBK / UTF-8</div>
+          </div>
+          <div class="fi" id="fiExp"></div>
+          <input type="file" id="fExp" class="hide" accept=".exp,.EXP,.txt">
+        </div>
+        <div>
+          <div class="drop" id="dzAvl">
+            <div class="t">AVL 元件庫 (.xlsx / .csv)</div>
+            <div class="h">點擊選擇或拖曳檔案到此 · 讀取第一個工作表</div>
+          </div>
+          <div class="fi" id="fiAvl"></div>
+          <input type="file" id="fAvl" class="hide" accept=".xlsx,.csv,.tsv,.txt">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 相容性 -->
+  <div class="card hide" id="cardCompat">
+    <header><h2><span class="step">✓</span>相容性檢查</h2>
+      <span class="row"><button class="sm" id="btnDlCompat">下載檢查報告</button></span></header>
+    <div class="body">
+      <div id="compatVerdict"></div>
+      <details open>
+        <summary>關鍵欄位對應（自動辨識，可手動改）</summary>
+        <div class="in"><div class="tw" style="max-height:none"><table id="tKey"></table></div></div>
+      </details>
+      <details open><summary>體檢明細</summary><div class="in" id="compatBody"></div></details>
+      <details open id="detRole" class="hide">
+        <summary>元件庫欄位對應（任何格式的 BOM 都在這裡指定哪一欄是什麼）</summary>
+        <div class="in">
+          <div class="row" style="margin-bottom:10px">
+            <label><input type="checkbox" id="cfgLoose"> 寬鬆類別判斷 — 元件庫的規格值沒有 <span class="mono">R/</span> <span class="mono">C/</span> <span class="mono">L/</span> 前綴時，改用符號欄與描述關鍵字推斷類別（匯入第三方 BOM 時建議開啟）</label>
+          </div>
+          <div class="tw" style="max-height:none"><table id="tRole"></table></div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card">
+    <header><h2><span class="step">2</span>比對設定</h2>
+      <span class="row">
+        <button class="sm" id="btnCfgExport">匯出設定</button>
+        <button class="sm" id="btnCfgImport">匯入設定</button>
+        <button class="sm" id="btnCfgReset">回復預設</button>
+        <input type="file" id="fCfg" class="hide" accept=".json">
+      </span>
+    </header>
+    <div class="body">
+      <div class="note">封裝對應表是本工具的核心設定。EXP 與 AVL 兩邊的封裝命名不同 (例：<span class="mono">R0201</span> ↔ <span class="mono">RC0201</span>)，因此改以「尺寸代碼」當橋樑：只有兩邊尺寸相同且電氣值完全相等才視為相符。新料庫若有新封裝名稱，在下面兩張表新增一列即可。</div>
+
+      <details open>
+        <summary>封裝對應表 — EXP 端</summary>
+        <div class="in">
+          <p class="cnt" style="margin:0 0 9px">尺寸留空 = 該封裝不進行換料 (例：非標準的功率電感封裝)。</p>
+          <div class="tw"><table id="tExpFp"></table></div>
+          <div class="row" style="margin-top:9px"><button class="sm" id="addExpFp">+ 新增一列</button></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>封裝對應表 — AVL 端補充</summary>
+        <div class="in">
+          <p class="cnt" style="margin:0 0 9px">程式會自動辨識 <span class="mono">RC0402_25</span>、<span class="mono">CC0603_OV</span> 這類 RC/CC 開頭的封裝，並從 DESCRIPTION 內文抓取尺寸。抓不到的 (電感、磁珠常見) 在此補上。</p>
+          <div class="tw"><table id="tAvlFp"></table></div>
+          <div class="row" style="margin-top:9px"><button class="sm" id="addAvlFp">+ 新增一列</button></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>類別與符號對應</summary>
+        <div class="in">
+          <div class="tw"><table id="tCat"></table></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>回填對應表 — 哪個元件庫欄位填到哪個 EXP 屬性</summary>
+        <div class="in">
+          <p class="cnt" style="margin:0 0 9px">EXP 屬性名稱可自由改寫；檔案裡沒有的屬性會自動略過。來源選「元件庫欄位」時，右欄挑一個角色。</p>
+          <div class="tw"><table id="tFill"></table></div>
+          <div class="row" style="margin-top:9px"><button class="sm" id="addFill">+ 新增一列</button></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>回填參數</summary>
+        <div class="in">
+          <div class="grid2">
+            <div><label class="f">Source Library (統一寫入此路徑)</label><input type="text" id="cfgLib"></div>
+            <div><label class="f">CLASS 欄位值</label><input type="text" id="cfgClass"></div>
+            <div><label class="f">視為「不置件」的 Value (逗號分隔，這些列不換料)</label><input type="text" id="cfgNC"></div>
+            <div><label class="f">ASSY_OPT 寫入值 (一個空白字元 = 留空屬性)</label><input type="text" id="cfgAssy"></div>
+          </div>
+          <div style="margin-top:12px"><label class="f">換料後要清成 &lt;null&gt; 的欄位 (逗號分隔；舊料號、舊廠編、Agile PN、條碼、價格等應列入，避免留下過期資料)</label><input type="text" id="cfgClear"></div>
+          <div class="row" style="margin-top:12px">
+            <label><input type="checkbox" id="cfgFixQuote"> 匯出時自動修正欄位內的孤立雙引號 (避免 OrCAD 出現 ORCAP-1704: Line has more fields than previous HEADER line)</label>
+          </div>
+        </div>
+      </details>
+
+      <div class="row" style="margin-top:6px">
+        <button class="primary" id="btnRun" disabled>開始比對並回填</button>
+        <span class="cnt" id="runHint"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card hide" id="cardOut">
+    <header><h2><span class="step">3</span>結果與下載</h2>
+      <span class="row">
+        <button class="primary" id="btnDlExp">下載更新後的 EXP</button>
+        <button id="btnDlCsv">下載比對報告 CSV</button>
+      </span>
+    </header>
+    <div class="body">
+      <div class="tiles" id="tiles"></div>
+      <div id="checkBox"></div>
+      <div class="filters">
+        <select id="fltResult">
+          <option value="">全部結果</option>
+          <option value="已更換">只看已更換</option>
+          <option value="需確認">只看需人工確認</option>
+          <option value="未更換">只看未更換</option>
+        </select>
+        <select id="fltCat"><option value="">全部類別</option></select>
+        <input type="text" id="fltKw" placeholder="搜尋 Part Reference / 料號 / Value / 封裝…" style="max-width:340px">
+        <span class="cnt" id="tblCnt"></span>
+      </div>
+      <div class="tw" style="max-height:560px"><table id="tRes"></table></div>
+      <div class="row" style="margin-top:10px"><button class="sm" id="btnMore">顯示更多 300 筆</button></div>
+      <div style="margin-top:14px"><label class="f">執行紀錄</label><div id="log"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   EXP ↔ AVL 換料工具 — 單檔離線版
+   依賴：瀏覽器原生 TextDecoder / DecompressionStream('deflate-raw')
+   建議 Chrome / Edge 103 以上
+   ========================================================================= */
+
+/* ---------------------------------------------------------------- 預設設定 */
+const DEF_CFG = {
+  lib: "\\\\192.168.60.248\\HW\\SYNERGY_CX\\CAPTURELIBRARY\\20230421.OLB",
+  cls: "DISCRETE",
+  nc: "NC, DNP, N/A",
+  assy: " ",
+  clear: "",
+  fixQuote: true,
+  avlLoose: false,
+  fill: null,          // 啟動時以 DEF_FILL 帶入
+  cats: [
+    { key:"R", name:"電阻 R",  on:true, sym:"RES.Normal",              pre:"R",      pkg:"RES" },
+    { key:"C", name:"電容 C",  on:true, sym:"CAP.Normal, CAP NP.Normal", pre:"C",      pkg:"CAP_NP" },
+    { key:"L", name:"電感 L",  on:true, sym:"LP-2.Normal",             pre:"L",      pkg:"INDUCTOR" },
+    { key:"B", name:"磁珠 Bead", on:true, sym:"BEAD.Normal",           pre:"BEAD, B", pkg:"BEAD" }
+  ],
+  expFp: [
+    ["R0201","R","0201"],["R0402","R","0402"],["R0603","R","0603"],["R0805","R","0805"],["R1206","R","1206"],
+    ["C0201","C","0201"],["C0402","C","0402"],["C0603","C","0603"],["C0805","C","0805"],["C1206","C","1206"],
+    ["L0201","L","0201"],["L0402","L","0402"],["L0603","L","0603"],["L0805","L","0805"],
+    ["L1210","L","1210"],["L4020","L",""],["L6_6X7_0","L",""],
+    ["FB0402","B","0402"],["FB0805","B","0805"]
+  ],
+  avlFp: [
+    ["L0201","0201"],["L0402-s0","0402"],["L-MHQ1005-s0","0402"],["L0603-s0","0603"],
+    ["L0805-s0","0805"],["L0805_1d05-s0","0805"],["IND_0402","0402"],["IND_0603","0603"],
+    ["IND_0603A","0603"],["IND_0805","0805"],["ind_0402_pol","0402"],["0402DC2N0XJRW","0402"],
+    ["INDC1005X55N","0402"],["INDC1608X80N","0603"],["BEADC1005X55N","0402"],["BEADC0603X33N","0201"],
+    ["L-0603HP","0603"],["L-0603CS","0603"],["L-0805CS","0805"],["FB1206","1206"],
+    ["BLM15PX_BH1","0402"],["BLM15PX800SN1D","0402"],["BLM15PX121SN1D","0402"],["FB_BLM15PX121SN1D","0402"],
+    ["BLM15KD300SN1D","0402"],["NFZ15SG152SN10B","0402"],["BLM03PX330SN1D","0201"],["BLM03PX121SN1D","0201"],
+    ["BLM03PX_SZ_1D","0201"],["BLM03PX330SZ1D","0201"],["BLF03VK221SNGD","0201"],["BLM18EG101TH1D","0603"],
+    ["BLM18SP221SN1B","0603"],["KPZ1608SHR300ATDH5","0603"],["BLM21AG102BH1J","0805"],["BLM31SN500SN1L","1206"]
+  ]
+};
+let CFG = structuredClone(DEF_CFG);
+let AVLMAP = { M:{}, how:{} };
+
+/* 元件庫欄位「角色」：任何格式的 BOM 都用這組角色對應，載入時依別名自動辨識，可手動改 */
+const ROLEDEF = [
+  { k:"value", label:"規格值 Value", req:true,  alias:["Value","VALUE","規格值","規格","Val","Part Value"] },
+  { k:"fp",    label:"封裝 PCB Footprint", req:true, alias:["PCB Footprint","Footprint","PCB_Footprint","PACKAGE","Package","封裝","PKG","Case","Case Code","Land Pattern"] },
+  { k:"item",  label:"內部料號 ITEM_NUMBER", alias:["ITEM_NUMBER","Item Number","ITEM","Item","Item No","料號","內部料號","自編料號","Part Number","PN"] },
+  { k:"mfg",   label:"製造商 MFG_NAME", alias:["MFG_NAME","Manufacturer","MFR","MFG","Mfg","廠商","製造商","品牌","Brand","Vendor"] },
+  { k:"mpn",   label:"廠商料號 MFG_PN", alias:["MFG_PN","MPN","MFR_PN","MFR PN","Manufacturer Part Number","Mfg Part Number","廠商料號","製造商料號","原廠料號","Vendor PN"] },
+  { k:"desc",  label:"描述 DESCRIPTION", alias:["DESCRIPTION","Description","描述","規格說明","品名","Desc"] },
+  { k:"status",label:"料況 Status", alias:["Status","狀態","料況","Life Cycle","Lifecycle","LifeCycle"] },
+  { k:"pkg",   label:"符號 Source Package", alias:["Source Package","Symbol","SYMBOL","Symbol Name","符號","符號名稱"] },
+  { k:"ctype", label:"COMPONENT_TYPE", alias:["COMPONENT_TYPE","Component Type","Mount","Mounting","SMD/DIP","貼裝方式","封裝形式","Package Type"] },
+  { k:"tlow",  label:"TEMP_LOW", alias:["TEMP_LOW","Temp Low","Min Temp","最低溫度"] },
+  { k:"thigh", label:"TEMP_HIGH", alias:["TEMP_HIGH","Temp High","Max Temp","最高溫度"] },
+  { k:"volt",  label:"耐壓 VOLTAGE", alias:["VOLTAGE","Voltage","耐壓","Rated Voltage","額定電壓","WV"] },
+  { k:"cur",   label:"電流／功率 CURRENT", alias:["CURRENT","Current","電流","Rated Current","POWER","Power","功率","Wattage"] },
+  { k:"func",  label:"Function", alias:["Function","功能","Category"] },
+  { k:"ds",    label:"Datasheet", alias:["Datasheet","DataSheet","規格書","Spec","Datasheet Link"] },
+  { k:"tol",   label:"容差 Tolerance（可選，挑料比對用）", alias:["Tolerance","TOL","容差","誤差"] },
+  { k:"diel",  label:"介質材質（可選，電容比對用）", alias:["Dielectric","Dielectric Type","材質","介質"] }
+];
+function resolveRoles(hdr){
+  const low = hdr.map(h => String(h).toLowerCase().trim());
+  const M = {}, how = {};
+  for (const d of ROLEDEF){
+    let i = -1, src = "";
+    for (const a of d.alias){ i = low.indexOf(a.toLowerCase()); if (i >= 0){ src = hdr[i]; break; } }
+    M[d.k] = i >= 0 ? i : null; how[d.k] = src;
+  }
+  return { M, how };
+}
+
+/* 關鍵欄位別名：各家料庫屬性命名不同，讀取時自動比對，找不到可在介面手動指定 */
+const KEYDEF = [
+  { k:"ref",  label:"Part Reference (參考編號)", req:true,
+    alias:["Part Reference","Reference","RefDes","Ref Des","REFDES","Designator","Part Ref","Part_Reference"] },
+  { k:"val",  label:"Value (規格值)", req:true,
+    alias:["Value","PART VALUE","Part Value","VAL","Comment","Part_Value"] },
+  { k:"fp",   label:"PCB Footprint (封裝)", req:true,
+    alias:["PCB Footprint","Footprint","PCB_Footprint","PCB FOOTPRINT","PACKAGE","Package","PKG","Land Pattern","PCB Package"] },
+  { k:"desc", label:"Description (描述，用於挑料比對)", req:false,
+    alias:["Description","DESCRIPTION","DESC","Part Description"] },
+  { k:"sym",  label:"Source Part (符號名稱，用於判斷類別)", req:false,
+    alias:["Source Part","Symbol","SYMBOL","Source Symbol"] }
+];
+function resolveKeys(hdr){
+  const low = hdr.map(h => String(h).toLowerCase());
+  const K = {}, how = {};
+  for (const d of KEYDEF){
+    let i = -1, src = "";
+    for (const a of d.alias){ i = low.indexOf(a.toLowerCase()); if (i >= 0){ src = hdr[i]; break; } }
+    K[d.k] = i >= 0 ? i : null; how[d.k] = src;
+  }
+  return { K, how };
+}
+const $ = s => document.querySelector(s);
+const log = (m,cls) => { const el=$("#log"); el.textContent += (cls==="err"?"[錯誤] ":cls==="warn"?"[注意] ":"")+m+"\n"; el.scrollTop=el.scrollHeight; };
+
+/* ======================================================================== */
+/* 1. GBK 編解碼 (以 TextDecoder 反建編碼表，無需外部套件)                    */
+/* ======================================================================== */
+/* 無法以 GBK 對應的位元組會暫存成 U+E000+byte (私用區)，輸出時原樣寫回，
+   確保未經修改的欄位可位元級還原 —— 有些 EXP 夾雜 cp1252／Big5 殘碼。 */
+const PUA = 0xE000;
+let GBKT = null;                          // {enc: char->[b0,b1], dec: b0*256+b1 -> char}
+function gbkTables(){
+  if (GBKT) return GBKT;
+  const t0 = performance.now();
+  const pairs = [], buf = [];
+  for (let lead = 0x81; lead <= 0xFE; lead++)
+    for (let trail = 0x40; trail <= 0xFE; trail++){
+      if (trail === 0x7F) continue;
+      pairs.push((lead << 8) | trail);
+      buf.push(lead, trail, 0x0A);        // 以 \n 分隔，解碼後可逐段對回
+    }
+  const txt = new TextDecoder("gbk").decode(new Uint8Array(buf)).split("\n");
+  const enc = new Map(), dec = new Map();
+  for (let i = 0; i < pairs.length; i++){
+    const ch = txt[i];
+    if (ch && ch.length === 1 && ch !== "�"){
+      dec.set(pairs[i], ch);
+      if (!enc.has(ch)) enc.set(ch, pairs[i]);
+    }
+  }
+  GBKT = { enc, dec };
+  log(`GBK 對應表建立完成：${dec.size} 個字，耗時 ${(performance.now()-t0).toFixed(0)} ms`);
+  return GBKT;
+}
+function decodeGBK(u8){
+  const { dec } = gbkTables();
+  const out = []; let bad = 0;
+  for (let i = 0; i < u8.length; ){
+    const b = u8[i];
+    if (b < 0x80){ out.push(b); i++; continue; }
+    const ch = (i + 1 < u8.length) ? dec.get((b << 8) | u8[i+1]) : undefined;
+    if (ch !== undefined){ out.push(ch.codePointAt(0)); i += 2; }
+    else { out.push(PUA + b); bad++; i++; }   // 保留原位元組
+  }
+  if (bad) log(`檔案內有 ${bad} 個非 GBK 位元組 (可能夾雜 cp1252／Big5 殘碼)，已原樣保留，輸出時不會被破壞`, "warn");
+  let s = "";
+  for (let i = 0; i < out.length; i += 8192)
+    s += String.fromCodePoint.apply(null, out.slice(i, i + 8192));
+  return s;
+}
+function encodeGBK(str){
+  const { enc } = gbkTables();
+  const out = new Uint8Array(str.length * 3);
+  let n = 0, miss = 0;
+  for (const ch of str){
+    const c = ch.codePointAt(0);
+    if (c < 0x80){ out[n++] = c; continue; }
+    if (c >= PUA && c <= PUA + 0xFF){ out[n++] = c - PUA; continue; }
+    const p = enc.get(ch);
+    if (p !== undefined){ out[n++] = p >> 8; out[n++] = p & 0xFF; }
+    else { out[n++] = 0x3F; miss++; }     // 無法對應者寫 '?'
+  }
+  if (miss) log(`有 ${miss} 個字元無法以 GBK 表示，已用 ? 取代`, "warn");
+  return out.slice(0, n);
+}
+function decodeAuto(buf){
+  const u8 = new Uint8Array(buf);
+  if (u8[0] === 0xEF && u8[1] === 0xBB && u8[2] === 0xBF)
+    return { text: new TextDecoder("utf-8").decode(u8.subarray(3)), enc: "UTF-8 (BOM)" };
+  try {                                    // 先試嚴格 UTF-8，失敗即視為 GBK
+    return { text: new TextDecoder("utf-8", { fatal:true }).decode(u8), enc: "UTF-8" };
+  } catch(e){
+    return { text: decodeGBK(u8), enc: "GBK" };
+  }
+}
+function encodeOut(str, enc){
+  if (enc === "GBK") return encodeGBK(str);
+  const u8 = new TextEncoder().encode(str);
+  if (enc === "UTF-8 (BOM)"){
+    const o = new Uint8Array(u8.length + 3);
+    o.set([0xEF,0xBB,0xBF]); o.set(u8, 3); return o;
+  }
+  return u8;
+}
+
+/* ======================================================================== */
+/* 2. 離線 xlsx 讀取 (ZIP 解析 + DecompressionStream)                        */
+/* ======================================================================== */
+async function inflateRaw(u8){
+  if (typeof DecompressionStream === "undefined")
+    throw new Error("此瀏覽器不支援 DecompressionStream，請改用 Chrome / Edge 103 以上，或將 AVL 另存為 CSV 匯入。");
+  const ds = new DecompressionStream("deflate-raw");
+  const stream = new Blob([u8]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function unzip(buf){
+  const u8 = new Uint8Array(buf), dv = new DataView(u8.buffer);
+  // 由尾端找 End Of Central Directory
+  let eocd = -1;
+  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 66000); i--)
+    if (dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  if (eocd < 0) throw new Error("不是有效的 zip / xlsx 檔");
+  const n = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const files = {};
+  for (let i = 0; i < n; i++){
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true);
+    const csize  = dv.getUint32(p + 20, true);
+    const nlen   = dv.getUint16(p + 28, true);
+    const elen   = dv.getUint16(p + 30, true);
+    const clen   = dv.getUint16(p + 32, true);
+    const off    = dv.getUint32(p + 42, true);
+    const name   = new TextDecoder("utf-8").decode(u8.subarray(p + 46, p + 46 + nlen));
+    // 由 local header 取得真正的資料起點
+    const lnlen = dv.getUint16(off + 26, true), lelen = dv.getUint16(off + 28, true);
+    const start = off + 30 + lnlen + lelen;
+    files[name] = { method, data: u8.subarray(start, start + csize) };
+    p += 46 + nlen + elen + clen;
+  }
+  const out = {};
+  for (const k in files){
+    const f = files[k];
+    out[k] = f.method === 0 ? f.data : await inflateRaw(f.data);
+  }
+  return out;
+}
+const XT = u8 => new TextDecoder("utf-8").decode(u8);
+function unesc(s){
+  return s.replace(/&#(\d+);/g, (m,d)=>String.fromCodePoint(+d))
+          .replace(/&#x([0-9a-f]+);/gi, (m,h)=>String.fromCodePoint(parseInt(h,16)))
+          .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"')
+          .replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+}
+function colIdx(ref){                      // "BC12" -> 54
+  let n = 0;
+  for (let i = 0; i < ref.length; i++){
+    const c = ref.charCodeAt(i);
+    if (c < 65 || c > 90) break;
+    n = n * 26 + (c - 64);
+  }
+  return n - 1;
+}
+async function readXlsx(buf){
+  const z = await unzip(buf);
+  /* 注意：以下正則的屬性段一律用 [^>]*? (惰性)，否則遇到自閉合空白節點
+     <c r="D9" s="7"/> 時，貪婪的 [^>]* 會把結尾的 "/" 一起吃掉，
+     導致該節點誤吞下一個節點的內容，整列資料左移。 */
+  const T_RE = /<t\b[^>]*?(?:\/>|>([\s\S]*?)<\/t>)/g;
+  const texts = s => { let o = ""; for (const m of s.replace(/<rPh[\s\S]*?<\/rPh>/g,"").matchAll(T_RE)) o += m[1] || ""; return unesc(o); };
+  // sharedStrings
+  const sst = [];
+  if (z["xl/sharedStrings.xml"]){
+    const x = XT(z["xl/sharedStrings.xml"]);
+    for (const m of x.matchAll(/<si\b[^>]*?(?:\/>|>([\s\S]*?)<\/si>)/g)) sst.push(texts(m[1] || ""));
+  }
+  // 第一個工作表 (依 workbook.xml 的宣告順序)
+  const wbx = XT(z["xl/workbook.xml"] || new Uint8Array());
+  const relx = XT(z["xl/_rels/workbook.xml.rels"] || new Uint8Array());
+  const rels = {};
+  for (const m of relx.matchAll(/<Relationship\b[^>]*?Id="([^"]+)"[^>]*?Target="([^"]+)"/g))
+    rels[m[1]] = m[2].replace(/^\/?xl\//,"").replace(/^\//,"");
+  let path = null, sheetName = "";
+  const sm = wbx.match(/<sheet\b[^>]*?>/);
+  if (sm){
+    sheetName = unesc((sm[0].match(/name="([^"]*)"/)||[,""])[1]);
+    const rid = (sm[0].match(/r:id="([^"]+)"/)||[])[1];
+    if (rid && rels[rid]) path = "xl/" + rels[rid];
+  }
+  if (!path) path = Object.keys(z).find(k=>/^xl\/worksheets\/sheet\d*\.xml$/.test(k));
+  if (!path) throw new Error("xlsx 內找不到工作表");
+  const sx = XT(z[path]);
+  const rows = [];
+  for (const rm of sx.matchAll(/<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)){
+    const arr = [];
+    let auto = 0;
+    for (const cm of (rm[1]||"").matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+      const at = cm[1], inner = cm[2] || "";
+      const ref = (at.match(/r="([A-Z]+\d+)"/)||[,""])[1];
+      const ci = ref ? colIdx(ref) : auto;      // 少數檔案省略 r 屬性，改用出現順序
+      auto = ci + 1;
+      const ty = (at.match(/\bt="([^"]+)"/)||[,"n"])[1];
+      let v = "";
+      if (ty === "inlineStr") v = texts(inner);
+      else {
+        const vm = inner.match(/<v\b[^>]*?(?:\/>|>([\s\S]*?)<\/v>)/);
+        v = vm ? unesc(vm[1] || "") : "";
+        if (ty === "s") v = sst[+v] ?? "";
+      }
+      if (ci >= 0) arr[ci] = v;
+    }
+    rows.push(arr);
+  }
+  return { rows, sheetName };
+}
+function readCsv(text){
+  const rows = []; let row = [], cur = "", q = false;
+  const sep = (text.split("\n")[0].split("\t").length > text.split("\n")[0].split(",").length) ? "\t" : ",";
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){
+      if (c === '"'){ if (text[i+1] === '"'){ cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === sep){ row.push(cur); cur = ""; }
+    else if (c === "\n"){ row.push(cur); rows.push(row); row = []; cur = ""; }
+    else if (c !== "\r") cur += c;
+  }
+  if (cur !== "" || row.length){ row.push(cur); rows.push(row); }
+  return { rows, sheetName: "CSV" };
+}
+
+/* ======================================================================== */
+/* 3. EXP 解析 / 組回                                                        */
+/* ======================================================================== */
+function parseExp(text){
+  const raw = text.split(/\r\n|\n/);
+  const lines = raw.filter(l => l.trim() !== "");
+  if (lines.length < 3) throw new Error("EXP 內容不足 (至少需 DESIGN + HEADER + 1 筆零件)");
+  const design = lines[0];
+  const hdr = lines[1].split("\t").map(s => s.replace(/^"|"$/g, ""));
+  if (hdr[0] !== "HEADER") throw new Error("第 2 行不是 HEADER 行，請確認是 OrCAD 匯出的 EXP");
+  const rows = lines.slice(2).map(l => l.split("\t").map(s => s.replace(/^"|"$/g, "")));
+  const ix = {}; hdr.forEach((h,i) => ix[h] = i);
+  const ixLow = {}; hdr.forEach((h,i) => { const k = h.toLowerCase(); if (!(k in ixLow)) ixLow[k] = []; ixLow[k].push(i); });
+  const { K, how } = resolveKeys(hdr);
+  const miss = KEYDEF.filter(d => d.req && K[d.k] == null).map(d => d.label);
+  return { design, hdr, rows, ix, ixLow, K, how, miss };
+}
+function fieldSafe(v, fix){
+  // 只清掉會破壞 TAB 分隔格式的字元；不可 trim，否則會把刻意留空白的屬性 (ASSY_OPT=" ") 清成空字串
+  let s = String(v ?? "").replace(/[\t\r\n]+/g, " ");
+  if (fix && s.includes('"'))
+    s = s.replace(/(\d)"/g, "$1in").replace(/"/g, "");   // 數字後的 " 視為英吋
+  return s;
+}
+function buildExp(exp, fix){
+  const q = v => '"' + v + '"';
+  const out = [exp.design, exp.hdr.map(q).join("\t")];
+  for (const r of exp.rows) out.push(r.map(v => q(fieldSafe(v, fix))).join("\t"));
+  return out.join("\r\n") + "\r\n";
+}
+function validateExp(text, ncol){
+  const bad = [];
+  const lines = text.split("\r\n");
+  for (let i = 0; i < lines.length; i++){
+    const l = lines[i];
+    if (!l.trim()) continue;
+    const f = l.split("\t").length, qn = (l.match(/"/g) || []).length;
+    const exp = (i === 0) ? 2 : ncol;
+    if (f !== exp || qn !== exp * 2) bad.push({ line: i + 1, fields: f, quotes: qn, expect: exp });
+  }
+  return bad;
+}
+
+/* ======================================================================== */
+/* 4. 數值正規化                                                             */
+/* ======================================================================== */
+const fw = s => String(s ?? "").replace(/，/g, ",").replace(/％/g, "%").replace(/[ΩΩ]/g, "R");
+function rVal(t){
+  const raw = String(t).trim();
+  // 毫歐要在轉大寫前判斷，否則 100mR (0.1Ω) 會與 100M (100MΩ) 混淆
+  let m = /^([\d.]+)\s*m(?:R|Ω|ohms?)?$/.exec(raw);
+  if (m) return parseFloat(m[1]) / 1000;
+  const s = raw.toUpperCase().replace(/\s/g,"").replace(/OHMS?/g,"R").replace(/Ω/g,"R");
+  m = /^([\d.]+)(K|M|R|MEG)?$/.exec(s);
+  if (!m) return null;
+  return parseFloat(m[1]) * ({K:1e3, M:1e6, MEG:1e6, R:1}[m[2]] ?? 1);
+}
+function sciVal(t, unit){
+  t = String(t).trim().toUpperCase().replace(/\s/g,"");
+  const m = new RegExp("^([\\d.]+)(P|N|U|M)?" + unit + "?$").exec(t);
+  if (!m) return null;
+  return parseFloat(m[1]) * ({P:1e-12, N:1e-9, U:1e-6, M:1e-3}[m[2]] ?? 1);
+}
+const cVal = t => sciVal(t, "F"), lVal = t => sciVal(t, "H");
+function iVal(t){
+  const m = /^([\d.]+)\s*(MA|UA|A)$/i.exec(String(t).trim());
+  if (!m) return null;
+  return parseFloat(m[1]) * ({a:1, ma:1e-3, ua:1e-6}[m[2].toLowerCase()]);
+}
+const near = (a,b) => a != null && b != null && Math.abs(a-b) <= Math.max(Math.abs(a),Math.abs(b))*1e-9 + 1e-18;
+const DIELS = [["C0G",["C0G","COG","NP0","NPO"]],["X5R",["X5R"]],["X7R",["X7R"]],["X7S",["X7S"]],
+  ["X6S",["X6S"]],["X7T",["X7T"]],["X8R",["X8R"]],["Y5V",["Y5V"]],["Z5U",["Z5U"]]];
+function getDiel(s){
+  const t = String(s || "").toUpperCase();
+  for (const [k, al] of DIELS) for (const a of al) if (t.includes(a)) return k;
+  return null;
+}
+function getTol(s){
+  const t = fw(s);
+  let m = /±?\s*([\d.]+)\s*%/.exec(t);
+  if (m) return ["pct", parseFloat(m[1])];
+  m = /±\s*([\d.]+)\s*(pF|nH|nF|p)\b/i.exec(t);
+  if (m){
+    const f = {pf:1e-12, p:1e-12, nf:1e-9, nh:1e-9}[m[2].toLowerCase()];
+    return ["abs", parseFloat(m[1]) * f];
+  }
+  return null;
+}
+function getVolt(s){
+  const m = [...fw(s).matchAll(/([\d.]+)\s*V\b/gi)];
+  return m.length ? parseFloat(m[m.length-1][1]) : null;
+}
+const SIZE_RE = /\b(01005|0201|0402|0603|0805|1206|1210|1812|2010|2512)\b/;
+
+/* ======================================================================== */
+/* 5. 比對引擎                                                               */
+/* ======================================================================== */
+function avlSize(fp, desc, extra){
+  const f = String(fp || "").toUpperCase();
+  let m = /^(?:RC|CC)0?(\d{4})/.exec(f);            if (m) return m[1];
+  m = /^R(01005)$/.exec(f);                          if (m) return m[1];
+  if (extra.has(f)) return extra.get(f);
+  m = SIZE_RE.exec(String(desc || ""));              if (m) return m[1];
+  m = /^(?:R|C|L|RC|CC)_?(\d{4})/.exec(f);           if (m) return m[1];
+  return null;
+}
+function buildPool(avlRows, cfg){
+  const hdr = avlRows[0].map(s => String(s||"").trim());
+  const M = AVLMAP.M;
+  const extra = new Map(cfg.avlFp.filter(r=>r[0]).map(r => [String(r[0]).toUpperCase(), String(r[1]).trim()]));
+  const preMap = [];                                  // [prefix, catKey]
+  for (const c of cfg.cats)
+    for (const p of String(c.pre).split(",").map(s=>s.trim()).filter(Boolean))
+      preMap.push([p.toUpperCase(), c.key]);
+  const CLEAN = s => String(s ?? "").replace(/[\t\r\n]+/g," ").replace(/\s+/g," ").trim();
+  const G = (r, k) => M[k] == null ? "" : CLEAN(r[M[k]]);
+  const KEYWORD = [[/FERRITE BEAD|FER BEAD|CHIP BEAD/i,"B"],[/RESISTOR|THICK FILM|THIN FILM/i,"R"],
+                   [/CAPACITOR|MLCC|CERAMIC CAP/i,"C"],[/INDUCTOR|CHOKE/i,"L"]];
+  const PKGCAT = [[/^RES/i,"R"],[/^CAP/i,"C"],[/^IND|^L$/i,"L"],[/^BEAD|^BLM|^BLF/i,"B"]];
+  const pool = [];
+  let noCat = 0;
+  for (let i = 1; i < avlRows.length; i++){
+    const r = avlRows[i]; if (!r || !r.length) continue;
+    const rec = {}; for (const d of ROLEDEF) rec[d.k] = G(r, d.k);
+    if (!rec.value && !rec.mpn) continue;
+    const v = rec.value, blob = (v + " " + rec.pkg + " " + rec.desc).toUpperCase();
+    let cat = null, parts = [];
+    const m = /^([A-Za-z]+)\/(.+)$/.exec(v);
+    if (m){
+      const hit = preMap.find(p => p[0] === m[1].toUpperCase());
+      if (hit){ cat = hit[1]; parts = m[2].split("/").map(s => s.trim()); }
+    }
+    const isBead = /FERRITE BEAD|FER BEAD/.test(blob) && !/FBGA|BGA\d/.test(blob);
+    if (isBead && cfg.cats.some(c => c.key === "B")) cat = "B";
+    /* 寬鬆判斷：Value 沒有 R/ C/ L/ 前綴時，改由符號欄與描述關鍵字推斷 (第三方 BOM 常見) */
+    if (!cat && cfg.avlLoose){
+      for (const [re, k] of PKGCAT) if (rec.pkg && re.test(rec.pkg)){ cat = k; break; }
+      if (!cat) for (const [re, k] of KEYWORD) if (re.test(rec.desc)){ cat = k; break; }
+      if (!cat){ const f = rec.fp.toUpperCase();
+        if (/^RC/.test(f)) cat = "R"; else if (/^CC/.test(f)) cat = "C"; }
+      if (cat && !parts.length) parts = [v];
+    }
+    if (!cat){ noCat++; continue; }
+    if (!parts.length) parts = [v];
+    let val = null, cur = null;
+    if (cat === "B"){
+      const mv = /^(?:[A-Za-z]+\/)?([\d.]+)(K?)R?(?:\/|$)/i.exec(v);
+      if (mv) val = parseFloat(mv[1]) * (mv[2].toUpperCase() === "K" ? 1000 : 1);
+      if (val == null){ const m2 = /([\d.]+)\s*(?:OHMS|OHM|Ω)/i.exec(rec.desc); if (m2) val = parseFloat(m2[1]); }
+      for (const p of parts.slice(1)) cur = iVal(p) ?? cur;
+      if (cur == null){ const m3 = /([\d.]+)\s*(mA|A)\b/.exec(rec.desc); if (m3) cur = iVal(m3[0]); }
+    } else {
+      val = cat === "R" ? rVal(parts[0]) : cat === "C" ? cVal(parts[0]) : lVal(parts[0]);
+      for (const p of parts.slice(1)) cur = iVal(p) ?? cur;
+    }
+    if (cur == null && rec.cur) cur = iVal(rec.cur);
+    const rest = parts.slice(1).join("/");
+    let tol = getTol(rest) || ((cat === "L" || cat === "B") ? getTol(rec.desc) : null);
+    if (!tol && rec.tol) tol = tolTok(rec.tol) || getTol(rec.tol);
+    let volt = cat === "C" ? getVolt(rest) : null;
+    if (cat === "C" && volt == null && rec.volt) volt = parseFloat(String(rec.volt).replace(/[^\d.]/g,"")) || null;
+    pool.push({
+      cat, val, cur, parts, rec, row: i + 1,
+      size: avlSize(rec.fp, rec.desc, extra), tol, volt,
+      diel: cat === "C" ? (getDiel(rec.diel) || getDiel(rec.desc + " " + rec.mpn)) : null,
+      status: rec.status.toUpperCase()
+    });
+  }
+  const miss = ROLEDEF.filter(d => d.req && M[d.k] == null).map(d => d.label);
+  return { pool, missing:miss, count: avlRows.length - 1, noCat };
+}
+/* 編碼式 Value 的容差段沒有 ± 號 (例 C/1.6pF/0.05p/50V 的 "0.05p")，單獨處理 */
+function tolTok(seg){
+  const s = String(seg).trim();
+  let m = /^±?\s*([\d.]+)\s*%$/.exec(s);
+  if (m) return ["pct", parseFloat(m[1])];
+  m = /^±?\s*([\d.]+)\s*(pF|p|nH|nF)$/i.exec(s);
+  if (m) return ["abs", parseFloat(m[1]) * ({pf:1e-12, p:1e-12, nf:1e-9, nh:1e-9}[m[2].toLowerCase()])];
+  return null;
+}
+const ohmTok = s => { const m = /^([\d.]+)(K?)R?$/i.exec(String(s).trim());
+  return m ? parseFloat(m[1]) * (m[2].toUpperCase() === "K" ? 1000 : 1) : null; };
+function reqOf(cat, value, desc){
+  const d = fw(desc), v = fw(value);
+  const o = { val:null, cur:null, tol:getTol(d), volt:null, diel:null };
+  /* Value 已是編碼格式 (R/49.9R/1%/0201) 時直接取用其欄位，比 Description 可靠 */
+  const m = /^([A-Za-z][A-Za-z0-9_]*)\/(.+)$/.exec(v);
+  if (m){
+    const seg = m[2].split("/").map(s => s.trim());
+    o.val = cat === "R" ? rVal(seg[0]) : cat === "C" ? cVal(seg[0]) : cat === "L" ? lVal(seg[0]) : ohmTok(seg[0]);
+    let tolSet = false;
+    for (const s of seg.slice(1)){
+      const t = tolTok(s); if (t && !tolSet){ o.tol = t; tolSet = true; continue; }
+      const c = iVal(s);   if (c != null && o.cur == null) o.cur = c;
+    }
+    if (cat === "C"){ o.volt = getVolt(seg.slice(1).join("/")) ?? getVolt(d); o.diel = getDiel(d); }
+    return o;
+  }
+  if (cat === "R") o.val = rVal(v);
+  else if (cat === "C"){ o.val = cVal(v); o.volt = getVolt(d); o.diel = getDiel(d); }
+  else if (cat === "L"){ const p = v.split("/"); o.val = lVal(p[0]); if (p[1]) o.cur = iVal(p[1]); }
+  else if (cat === "B"){
+    const mm = /^([\d.]+)/.exec(v); if (mm) o.val = parseFloat(mm[1]);
+    const m2 = /_([\d.]+\s*(?:mA|A))$/i.exec(String(value)); if (m2) o.cur = iVal(m2[1]);
+  }
+  return o;
+}
+const cmpK = (a, b) => (a == null || b == null) ? [1,0] : near(a,b) ? [0,0] : (b > a ? [1, b-a] : [2, a-b]);
+function cmpArr(x, y){                       // 逐層比較 (數字或 [tier, dist])
+  for (let i = 0; i < Math.max(x.length, y.length); i++){
+    const a = x[i], b = y[i];
+    const av = Array.isArray(a) ? a : [a, 0], bv = Array.isArray(b) ? b : [b, 0];
+    if (av[0] !== bv[0]) return av[0] - bv[0];
+    if ((av[1]||0) !== (bv[1]||0)) return (av[1]||0) - (bv[1]||0);
+  }
+  return 0;
+}
+/* 回填對應：EXP 屬性 ← 來源。來源型別 avl=元件庫欄位(空值填<null>)、raw=元件庫欄位(空值保留)、
+   const=固定值、null=清成 <null>、lib=Source Library 設定值、sym=Source Package + ".Normal" */
+const SRCTYPE = { avl:"元件庫欄位", raw:"元件庫欄位(空值保留)", const:"固定值", null:"清成 <null>", lib:"Source Library 設定", sym:"符號名(Source Package+.Normal)" };
+const DEF_FILL = [
+  ["Value","raw","value"], ["PCB Footprint","raw","fp"], ["Description","raw","desc"], ["Source Package","raw","pkg"],
+  ["ITEM_NUMBER","avl","item"], ["MFG_NAME","avl","mfg"], ["MFG_PN","avl","mpn"],
+  ["COMPONENT_TYPE","avl","ctype"], ["CURRENT","avl","cur"], ["TEMP_HIGH","avl","thigh"],
+  ["TEMP_LOW","avl","tlow"], ["VOLTAGE","avl","volt"], ["Function","avl","func"],
+  ["DataSheet","avl","ds"], ["datasheet","avl","ds"],
+  ["ASSY_OPT","const"," "], ["CLASS","const","DISCRETE"], ["Power Pins Visible","const","False"],
+  ["Part Description","const",""], ["Source Library","lib",""],
+  ["Graphic","sym",""], ["Source Part","sym",""],
+  ["Characteristic","null",""], ["Geo PN","null",""], ["Manufacturer","null",""], ["Origin","null",""],
+  ["OriginalSymbolOrigin","null",""], ["Part number","null",""], ["厂商","null",""], ["品名","null",""]
+];
+
+function run(exp, pool, cfg){
+  const ix = exp.ix, ixLow = exp.ixLow, K = exp.K, out = [], report = [];
+  const ncList = String(cfg.nc).split(",").map(s=>s.trim().toUpperCase()).filter(Boolean);
+  const isNC = v => {
+    const s = String(v).trim().toUpperCase();
+    return !s || ncList.some(t => s === t || s.startsWith(t + "_") || s.startsWith(t + "/"));
+  };
+  const clearList = String(cfg.clear||"").split(",").map(s=>s.trim()).filter(Boolean);
+  /* 同一個屬性在不同設計可能大小寫不同 (Description / DESCRIPTION、Datasheet / DataSheet)，
+     一律寫入所有名稱相同 (不分大小寫) 的欄位 */
+  const wt = name => {                        // 寫入目標：同名(不分大小寫)欄位 + 別名解析到的關鍵欄位
+    const l = String(name).toLowerCase(), s = new Set(ixLow[l] || []);
+    if (l === "value" && K.val != null) s.add(K.val);
+    if (l === "pcb footprint" && K.fp != null) s.add(K.fp);
+    if (l === "description" && K.desc != null && exp.how.desc.toLowerCase() !== "part description") s.add(K.desc);
+    return [...s];
+  };
+  const setAll = (r, name, v) => { for (const i of wt(name)) r[i] = v; };
+  const has = name => (ixLow[String(name).toLowerCase()] || []).length > 0;
+  const symCat = new Map(), catOn = new Map(), catPkg = new Map(), catName = new Map();
+  for (const c of cfg.cats){
+    catOn.set(c.key, !!c.on); catPkg.set(c.key, c.pkg); catName.set(c.key, c.name);
+    for (const s of String(c.sym).split(",").map(s=>s.trim()).filter(Boolean)) symCat.set(s, c.key);
+  }
+  const fpMap = new Map();                    // EXP 封裝 -> {cat, size}
+  for (const [fp, cat, size] of cfg.expFp)
+    if (fp) fpMap.set(String(fp).toUpperCase(), { cat, size: String(size||"").trim() });
+  const extraFp = new Map(cfg.avlFp.filter(r=>r[0]).map(r => [String(r[0]).toUpperCase(), String(r[1]).trim()]));
+  const preList = [];
+  for (const c of cfg.cats)
+    for (const p of String(c.pre).split(",").map(s=>s.trim()).filter(Boolean)) preList.push([p.toUpperCase(), c.key]);
+
+  /* 尺寸判定：① EXP 對應表 ② RC####/CC#### 自動規則 ③ AVL 端補充表 */
+  const expSize = fpU => {
+    const t = fpMap.get(fpU);
+    if (t) return t.size;                     // 表內有設定 (空字串 = 刻意不換料)
+    const m = /^(?:RC|CC)0?(\d{4})/.exec(fpU);
+    if (m) return m[1];
+    if (extraFp.has(fpU)) return extraFp.get(fpU);
+    return null;                              // null = 對應表查無
+  };
+  /* 類別判定：① Source Part 符號 ② Value 前綴 (可含 NC_ 前置) ③ 封裝對應表 ④ RC/CC 自動規則 */
+  const catOf = (r, fpU) => {
+    if (K.sym != null){ const c = symCat.get(r[K.sym]); if (c) return c; }
+    let v = String(r[K.val]).trim();
+    for (const t of ncList) if (v.toUpperCase().startsWith(t + "_")) { v = v.slice(t.length + 1); break; }
+    const m = /^([A-Za-z][A-Za-z0-9_]*)\//.exec(v);
+    if (m){ const hit = preList.find(p => p[0] === m[1].toUpperCase()); if (hit) return hit[1]; }
+    const t = fpMap.get(fpU);
+    if (t) return t.cat;
+    if (/^RC/.test(fpU)) return "R";
+    if (/^CC/.test(fpU)) return "C";
+    return null;
+  };
+  let nChanged = 0;
+
+  for (const r0 of exp.rows){
+    const r = r0.slice();
+    const fpU = String(r[K.fp]).toUpperCase();
+    const cat = catOf(r, fpU);
+    if (!cat || !catOn.get(cat)){ out.push(r); continue; }
+
+    const rec = { ref:r[K.ref], cat, catName:catName.get(cat),
+      oldValue:r[K.val], oldFp:r[K.fp],
+      oldDesc: K.desc != null ? r[K.desc] : "",
+      oldPn: ix["Part number"] != null ? r[ix["Part number"]] : (ix["MFG_PN"] != null ? r[ix["MFG_PN"]] : ""),
+      ncand:0, flags:"", alts:"", result:"", reason:"",
+      newValue:"", newItem:"", newMfg:"", newMfgPn:"", newFp:"", newPkg:"", newStatus:"", newDesc:"" };
+
+    if (isNC(rec.oldValue)){
+      rec.result = "未更換"; rec.reason = `Value=${rec.oldValue}，不置件／無對應實體料號`;
+      report.push(rec); out.push(r); continue;
+    }
+    const size = expSize(fpU);
+    if (!size){
+      rec.result = "未更換";
+      rec.reason = size === null ? `封裝 ${rec.oldFp} 不在封裝對應表中` : `封裝 ${rec.oldFp} 未設定尺寸，略過換料`;
+      report.push(rec); out.push(r); continue;
+    }
+    const q = reqOf(cat, rec.oldValue, rec.oldDesc);
+    const cands = pool.filter(p => p.cat === cat && p.size === size && near(p.val, q.val));
+    rec.ncand = cands.length;
+    if (!cands.length){
+      rec.result = "未更換"; rec.reason = `元件庫中查無 ${rec.oldValue} + ${size} 相符料號`;
+      report.push(rec); out.push(r); continue;
+    }
+    /* --- 挑料優先序：①排除EOL/NF ②耐壓 ③材質 ④容差 ⑤電流 ⑥Status=Y ⑦表中列序 --- */
+    const key = p => {
+      const k = [ (p.status === "EOL" || p.status === "NF") ? 1 : 0 ];
+      if (cat === "C"){
+        k.push(cmpK(q.volt, p.volt));
+        k.push((q.diel && p.diel === q.diel) ? 0 : (!q.diel || !p.diel) ? 1 : 2);
+      } else k.push([0,0], 0);
+      const rt = q.tol, pt = p.tol;
+      if (rt && pt && rt[0] === pt[0])
+        k.push(near(rt[1], pt[1]) ? [0,0] : (pt[1] < rt[1] ? [1, rt[1]-pt[1]] : [2, pt[1]-rt[1]]));
+      else k.push(rt && pt ? [3,0] : [4,0]);
+      k.push((cat === "L" || cat === "B") ? cmpK(q.cur, p.cur) : [0,0]);
+      k.push(p.status === "Y" ? 0 : 1);
+      k.push(p.row);
+      return k;
+    };
+    cands.sort((a,b) => cmpArr(key(a), key(b)));
+    const best = cands[0], x = best.rec;
+    const nz = v => v ? v : "<null>";
+    const pkg = x.pkg || catPkg.get(cat) || "";
+    const set = setAll.bind(null, r);
+    for (const [field, src, arg] of (cfg.fill || DEF_FILL)){
+      if (!field) continue;
+      if (src === "null")  { set(field, "<null>"); continue; }
+      if (src === "const") { set(field, field === "ASSY_OPT" ? cfg.assy : field === "CLASS" ? cfg.cls : arg); continue; }
+      if (src === "lib")   { set(field, cfg.lib); continue; }
+      if (src === "sym")   { if (pkg) set(field, pkg + ".Normal"); continue; }
+      const v = (arg === "pkg") ? pkg : (x[arg] ?? "");
+      set(field, src === "raw" ? v : nz(v));
+    }
+    for (const h of clearList) set(h, "<null>");
+    nChanged++;
+
+    const fl = [];
+    if (cat === "C" && q.volt && best.volt && !near(q.volt, best.volt))
+      fl.push(`耐壓 ${q.volt}→${best.volt}V` + (best.volt > q.volt ? "" : " ⚠降低"));
+    if (cat === "C" && q.diel && best.diel && q.diel !== best.diel) fl.push(`材質 ${q.diel}→${best.diel}`);
+    if ((cat === "L" || cat === "B") && q.cur && best.cur && !near(q.cur, best.cur))
+      fl.push(`電流 ${q.cur}→${best.cur}A` + (best.cur > q.cur ? "" : " ⚠降低"));
+    const rt = q.tol, pt = best.tol;
+    if (rt && pt && rt[0] === pt[0] && !near(rt[1], pt[1])){
+      const u = rt[0] === "pct" ? "%" : "pF";
+      const a = rt[0] === "pct" ? rt[1] : rt[1]*1e12, b = pt[0] === "pct" ? pt[1] : pt[1]*1e12;
+      fl.push(`容差 ±${+a.toFixed(4)}${u}→±${+b.toFixed(4)}${u}` + (b < a ? "" : " ⚠放寬"));
+    }
+    if (best.status === "EOL" || best.status === "NF") fl.push("Status=" + best.status);
+    Object.assign(rec, { result:"已更換", newValue:x.value, newItem:x.item, newMfg:x.mfg,
+      newMfgPn:x.mpn, newFp:x.fp, newPkg:pkg, newStatus:best.status || "-",
+      newDesc:x.desc, flags:fl.join("; "),
+      alts:cands.slice(1,6).map(c => `${c.rec.mpn}(${c.parts.slice(1).join("/") || c.rec.value})`).join(" | ") });
+    report.push(rec); out.push(r);
+  }
+  return { rows: out, report, nChanged };
+}
+
+/* ======================================================================== */
+/* 6. 介面                                                                   */
+/* ======================================================================== */
+let EXPDATA = null, AVLROWS = null, RESULT = null, OUTTEXT = null, OUTNAME = "updated.EXP", SHOWN = 300;
+
+function drop(dz, input, cb){
+  dz.addEventListener("click", () => input.click());
+  input.addEventListener("change", e => { if (e.target.files[0]) cb(e.target.files[0]); });
+  ["dragenter","dragover"].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add("over"); }));
+  ["dragleave","drop"].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove("over"); }));
+  dz.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) cb(f); });
+}
+function readyCheck(){
+  const roleOk = !AVLROWS || ROLEDEF.every(d => !d.req || AVLMAP.M[d.k] != null);
+  const ok = !!(EXPDATA && AVLROWS && !EXPDATA.miss.length && roleOk);
+  $("#btnRun").disabled = !ok;
+  $("#runHint").textContent = ok ? "" : (AVLROWS && !roleOk) ? "元件庫的規格值／封裝欄位尚未指定" : "請先匯入 EXP 與元件庫";
+  $("#s1hint").textContent = ok ? "檔案就緒" : "兩個檔案都選好後才能執行";
+}
+drop($("#dzExp"), $("#fExp"), async f => {
+  try{
+    const buf = await f.arrayBuffer();
+    const { text, enc } = decodeAuto(buf);
+    EXPDATA = parseExp(text); EXPDATA.enc = enc;
+    OUTNAME = f.name.replace(/\.exp$/i, "") + "_updated.EXP";
+    $("#dzExp").classList.add("done");
+    if (EXPDATA.miss.length) throw new Error("找不到必要屬性：" + EXPDATA.miss.join("、") + "。請在「關鍵欄位對應」手動指定");
+    $("#fiExp").textContent =
+      `${f.name}\n編碼 ${enc}　欄位 ${EXPDATA.hdr.length} 欄　零件 ${EXPDATA.rows.length} 筆\n` +
+      `DESIGN ${(EXPDATA.design.split("\t")[1]||"").replace(/"/g,"")}`;
+    renderKeyMap(); diagnose();
+    log(`EXP 載入：${f.name}，${EXPDATA.rows.length} 筆零件，編碼 ${enc}`);
+  } catch(e){
+    EXPDATA = null; $("#dzExp").classList.remove("done");
+    $("#fiExp").textContent = "讀取失敗：" + e.message; log(e.message, "err");
+  }
+  readyCheck();
+});
+drop($("#dzAvl"), $("#fAvl"), async f => {
+  try{
+    let res;
+    if (/\.(csv|tsv|txt)$/i.test(f.name)) res = readCsv(decodeAuto(await f.arrayBuffer()).text);
+    else res = await readXlsx(await f.arrayBuffer());
+    AVLROWS = res.rows.filter(r => r && r.some(c => String(c ?? "").trim() !== ""));
+    if (AVLROWS.length < 2) throw new Error("元件庫沒有資料列");
+    const hdr = AVLROWS[0].map(s => String(s||"").trim());
+    AVLMAP = resolveRoles(hdr);
+    const missing = ROLEDEF.filter(d => d.req && AVLMAP.M[d.k] == null).map(d => d.label);
+    const got = ROLEDEF.filter(d => AVLMAP.M[d.k] != null).length;
+    $("#dzAvl").classList.add("done");
+    $("#fiAvl").textContent = `${f.name}\n工作表 ${res.sheetName}　資料 ${AVLROWS.length-1} 筆　欄位 ${hdr.length} 欄\n` +
+      (missing.length ? `⚠ 找不到必要欄位：${missing.join("、")}，請在下方手動指定` : `已辨識 ${got}/${ROLEDEF.length} 個角色欄位`);
+    log(`元件庫載入：${f.name}（${res.sheetName}），${AVLROWS.length-1} 筆，辨識 ${got} 個角色欄位`);
+    renderRoleMap();
+  } catch(e){
+    AVLROWS = null; $("#dzAvl").classList.remove("done");
+    $("#fiAvl").textContent = "讀取失敗：" + e.message; log(e.message, "err");
+  }
+  readyCheck();
+});
+
+/* --- 關鍵欄位對應 --- */
+function renderKeyMap(){
+  const t = $("#tKey");
+  t.innerHTML = "<tr><th style='width:32%'>用途</th><th style='width:34%'>對應到 EXP 欄位</th><th>說明</th></tr>";
+  for (const d of KEYDEF){
+    const tr = t.insertRow();
+    const opts = [`<option value="">— 無 —</option>`].concat(
+      EXPDATA.hdr.map((h,i) => i === 0 ? "" : `<option value="${i}" ${EXPDATA.K[d.k] === i ? "selected" : ""}>${esc(h)}</option>`)).join("");
+    tr.innerHTML = `<td>${esc(d.label)}${d.req ? ' <span style="color:#b3261e">*</span>' : ""}</td>` +
+      `<td><select data-key="${d.k}">${opts}</select></td>` +
+      `<td class="cnt">${EXPDATA.how[d.k] ? "自動辨識：" + esc(EXPDATA.how[d.k]) : "未辨識到，可手動指定"}</td>`;
+  }
+}
+document.addEventListener("change", e => {
+  const k = e.target.dataset.key;
+  if (k && EXPDATA){
+    EXPDATA.K[k] = e.target.value === "" ? null : +e.target.value;
+    EXPDATA.how[k] = e.target.value === "" ? "" : EXPDATA.hdr[+e.target.value] + "（手動指定）";
+    EXPDATA.miss = KEYDEF.filter(d => d.req && EXPDATA.K[d.k] == null).map(d => d.label);
+    diagnose(); readyCheck();
+  }
+});
+
+/* --- 元件庫欄位對應 --- */
+function renderRoleMap(){
+  const hdr = AVLROWS ? AVLROWS[0].map(s => String(s||"").trim()) : [];
+  const t = $("#tRole");
+  t.innerHTML = "<tr><th style='width:34%'>角色</th><th style='width:34%'>對應到元件庫欄位</th><th>說明</th></tr>";
+  for (const d of ROLEDEF){
+    const tr = t.insertRow();
+    const opts = [`<option value="">— 無 —</option>`].concat(
+      hdr.map((h,i) => `<option value="${i}" ${AVLMAP.M[d.k] === i ? "selected" : ""}>${esc(h)}</option>`)).join("");
+    tr.innerHTML = `<td>${esc(d.label)}${d.req ? ' <span style="color:#b3261e">*</span>' : ""}</td>` +
+      `<td><select data-role="${d.k}">${opts}</select></td>` +
+      `<td class="cnt">${AVLMAP.how[d.k] ? "自動辨識：" + esc(AVLMAP.how[d.k]) : "未辨識到"}</td>`;
+  }
+  $("#detRole").classList.remove("hide");
+  $("#cardCompat").classList.remove("hide");
+  $("#cfgLoose").checked = !!CFG.avlLoose;
+}
+function renderFill(){
+  const t = $("#tFill");
+  t.innerHTML = "<tr><th style='width:30%'>EXP 屬性名稱</th><th style='width:28%'>來源</th><th style='width:30%'>內容</th><th>　</th></tr>";
+  (CFG.fill || []).forEach((row, i) => {
+    const tr = t.insertRow();
+    const srcSel = `<select data-fill="${i}" data-j="1">` +
+      Object.entries(SRCTYPE).map(([k,v]) => `<option value="${k}" ${row[1]===k?"selected":""}>${v}</option>`).join("") + `</select>`;
+    const arg = (row[1] === "avl" || row[1] === "raw")
+      ? `<select data-fill="${i}" data-j="2">` + ROLEDEF.map(d =>
+          `<option value="${d.k}" ${row[2]===d.k?"selected":""}>${esc(d.label)}</option>`).join("") + `</select>`
+      : (row[1] === "const" ? `<input value="${esc(row[2])}" data-fill="${i}" data-j="2">` : `<span class="cnt">—</span>`);
+    tr.innerHTML = `<td><input value="${esc(row[0])}" data-fill="${i}" data-j="0"></td><td>${srcSel}</td><td>${arg}</td>` +
+      `<td style="text-align:center"><button class="sm" data-delfill="${i}">刪除</button></td>`;
+  });
+}
+document.addEventListener("change", e => {
+  const rk = e.target.dataset.role;
+  if (rk){
+    AVLMAP.M[rk] = e.target.value === "" ? null : +e.target.value;
+    AVLMAP.how[rk] = e.target.value === "" ? "" : AVLROWS[0][+e.target.value] + "（手動指定）";
+    readyCheck(); return;
+  }
+  if (e.target.id === "cfgLoose"){ CFG.avlLoose = e.target.checked; return; }
+  const fi = e.target.dataset.fill;
+  if (fi != null && e.target.tagName === "SELECT"){
+    const j = +e.target.dataset.j;
+    CFG.fill[+fi][j] = e.target.value;
+    if (j === 1){                                   // 切換來源型別時給合理預設
+      const s = e.target.value;
+      CFG.fill[+fi][2] = (s === "avl" || s === "raw") ? "item" : "";
+      renderFill();
+    }
+  }
+});
+document.addEventListener("input", e => {
+  const fi = e.target.dataset.fill;
+  if (fi != null && e.target.tagName === "INPUT") CFG.fill[+fi][+e.target.dataset.j] = e.target.value;
+});
+document.addEventListener("click", e => {
+  const d = e.target.dataset.delfill;
+  if (d != null){ CFG.fill.splice(+d, 1); renderFill(); }
+});
+
+/* --- 相容性檢查 --- */
+let COMPAT = null;
+function diagnose(){
+  const E = EXPDATA, K = E.K, rows = E.rows;
+  const rec = {}, badFmt = [], unparsed = new Map(), noFp = new Map();
+  const catBy = { 符號:0, Value前綴:0, 封裝:0, 無法判定:0 };
+  const ncList = String(CFG.nc).split(",").map(s=>s.trim().toUpperCase()).filter(Boolean);
+  const isNC = v => { const s = String(v).trim().toUpperCase();
+    return !s || ncList.some(x => s === x || s.startsWith(x+"_") || s.startsWith(x+"/")); };
+  const symCat = new Map(), preList = [];
+  for (const c of CFG.cats){
+    for (const s of String(c.sym).split(",").map(s=>s.trim()).filter(Boolean)) symCat.set(s, c.key);
+    for (const p of String(c.pre).split(",").map(s=>s.trim()).filter(Boolean)) preList.push([p.toUpperCase(), c.key]);
+  }
+  const fpMap = new Map();
+  for (const [fp, cat, size] of CFG.expFp) if (fp) fpMap.set(String(fp).toUpperCase(), { cat, size:String(size||"").trim() });
+  const extraFp = new Map(CFG.avlFp.filter(r=>r[0]).map(r => [String(r[0]).toUpperCase(), String(r[1]).trim()]));
+  let nPassive = 0, nParsed = 0, nNC = 0, nSized = 0;
+  for (const r of rows){
+    rec[String(r[0]).split(":")[0]] = (rec[String(r[0]).split(":")[0]] || 0) + 1;
+    for (const v of r) if (String(v).includes('"')) { badFmt.push(r[K.ref]); break; }
+    const fpU = String(r[K.fp]).toUpperCase();
+    let cat = null, by = "無法判定";
+    if (K.sym != null && symCat.get(r[K.sym])){ cat = symCat.get(r[K.sym]); by = "符號"; }
+    if (!cat){
+      let v = String(r[K.val]).trim();
+      for (const x of ncList) if (v.toUpperCase().startsWith(x+"_")){ v = v.slice(x.length+1); break; }
+      const m = /^([A-Za-z][A-Za-z0-9_]*)\//.exec(v);
+      const hit = m && preList.find(p => p[0] === m[1].toUpperCase());
+      if (hit){ cat = hit[1]; by = "Value前綴"; }
+    }
+    if (!cat){
+      const f = fpMap.get(fpU);
+      if (f){ cat = f.cat; by = "封裝"; }
+      else if (/^RC/.test(fpU)){ cat = "R"; by = "封裝"; }
+      else if (/^CC/.test(fpU)){ cat = "C"; by = "封裝"; }
+    }
+    catBy[by]++;
+    if (!cat) continue;
+    nPassive++;
+    if (isNC(r[K.val])){ nNC++; continue; }
+    const size = fpMap.has(fpU) ? fpMap.get(fpU).size
+      : (/^(?:RC|CC)0?(\d{4})/.exec(fpU) || [])[1] || extraFp.get(fpU) || null;
+    if (size) nSized++; else noFp.set(r[K.fp], (noFp.get(r[K.fp])||0)+1);
+    const q = reqOf(cat, r[K.val], K.desc != null ? r[K.desc] : "");
+    if (q.val != null) nParsed++;
+    else unparsed.set(r[K.val], (unparsed.get(r[K.val])||0)+1);
+  }
+  const pct = (a,b) => b ? Math.round(a/b*1000)/10 : 0;
+  const top = m => [...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const need = nPassive - nNC;
+  COMPAT = { enc:E.enc, cols:E.hdr.length, parts:rows.length, rec, catBy, nPassive, nNC, need,
+    nParsed, nSized, unparsed:top(unparsed), noFp:top(noFp), badFmt:badFmt.length,
+    how:KEYDEF.map(d => `${d.label} → ${E.how[d.k] || "（無）"}`),
+    fill:(CFG.fill || DEF_FILL).map(f => f[0]).filter(h => h && (E.ixLow[h.toLowerCase()]||[]).length) };
+
+  const okParse = pct(nParsed, need), okSize = pct(nSized, need);
+  const verdict = (E.miss.length) ? ["bad","無法轉換","缺少必要屬性：" + E.miss.join("、")]
+    : (okParse >= 98 && okSize >= 98) ? ["good","可直接轉換","關鍵屬性齊全，Value 與封裝辨識率均達 98% 以上"]
+    : (okParse >= 80 && okSize >= 80) ? ["","需少量調整",`Value 可解析 ${okParse}%、封裝可對應 ${okSize}%，請看下方清單補設定`]
+    : ["bad","相容性不足",`Value 可解析僅 ${okParse}%、封裝可對應 ${okSize}%，這份檔案的寫法與現行規則差異較大`];
+  $("#compatVerdict").innerHTML = `<div class="note ${verdict[0]}"><b>判定：${verdict[1]}</b> — ${verdict[2]}</div>`;
+  const list = (arr, unit) => arr.length ? arr.map(([k,v]) => `<span class="mono">${esc(k)}</span> ${v}${unit}`).join("　·　") : "（無）";
+  $("#compatBody").innerHTML = `
+    <table>
+      <tr><th style="width:26%">項目</th><th>結果</th></tr>
+      <tr><td>檔案編碼</td><td>${esc(E.enc)}${E.enc==="GBK"?"　<span class='cnt'>（若原檔其實是 Big5，中文會呈現亂碼 — 目前未支援 Big5）</span>":""}</td></tr>
+      <tr><td>欄位數 / 零件數</td><td>${E.hdr.length} 欄　${rows.length} 筆</td></tr>
+      <tr><td>記錄型別</td><td>${Object.entries(rec).map(([k,v])=>`${esc(k)} ${v}`).join("　·　")}</td></tr>
+      <tr><td>關鍵欄位對應</td><td>${COMPAT.how.map(esc).join("<br>")}</td></tr>
+      <tr><td>可回填屬性</td><td>${COMPAT.fill.length} 個：<span class="mono">${COMPAT.fill.map(esc).join(", ")}</span></td></tr>
+      <tr><td>類別判定方式</td><td>${Object.entries(catBy).map(([k,v])=>`${k} ${v}`).join("　·　")}</td></tr>
+      <tr><td>納入換料範圍</td><td>被動元件 ${nPassive} 筆，其中不置件 ${nNC} 筆 → 實際需比對 <b>${need}</b> 筆</td></tr>
+      <tr><td>Value 可解析率</td><td><b>${okParse}%</b>（${nParsed}/${need}）</td></tr>
+      <tr><td>封裝可對應率</td><td><b>${okSize}%</b>（${nSized}/${need}）</td></tr>
+      <tr><td>無法解析的 Value</td><td>${list(COMPAT.unparsed," 筆")}</td></tr>
+      <tr><td>未對應的封裝</td><td>${list(COMPAT.noFp," 筆")}</td></tr>
+      <tr><td>格式風險</td><td>${badFmt.length ? `${badFmt.length} 列欄位內含雙引號（匯回 OrCAD 前需開啟自動修正）` : "無（無引號／TAB 殘留）"}</td></tr>
+    </table>`;
+  $("#cardCompat").classList.remove("hide");
+}
+$("#btnDlCompat").onclick = () => {
+  if (!COMPAT) return;
+  const C = COMPAT, L = [];
+  L.push("EXP 相容性檢查報告", "=".repeat(60), "");
+  L.push(`檔案編碼      : ${C.enc}`, `欄位數/零件數 : ${C.cols} 欄 / ${C.parts} 筆`);
+  L.push(`記錄型別      : ${Object.entries(C.rec).map(([k,v])=>k+" "+v).join(", ")}`, "");
+  L.push("關鍵欄位對應  :"); C.how.forEach(h => L.push("  " + h)); L.push("");
+  L.push(`可回填屬性    : ${C.fill.length} 個`, "  " + C.fill.join(", "), "");
+  L.push(`類別判定      : ${Object.entries(C.catBy).map(([k,v])=>k+" "+v).join(", ")}`);
+  L.push(`需比對筆數    : ${C.need}（被動元件 ${C.nPassive}，不置件 ${C.nNC}）`);
+  L.push(`Value 可解析  : ${C.nParsed}/${C.need}`, `封裝可對應    : ${C.nSized}/${C.need}`, "");
+  L.push("無法解析的 Value（前 10）:");
+  C.unparsed.forEach(([k,v]) => L.push(`  ${k}\t${v} 筆`));
+  L.push("", "未對應的封裝（前 10）:");
+  C.noFp.forEach(([k,v]) => L.push(`  ${k}\t${v} 筆`));
+  L.push("", `含雙引號的列數: ${C.badFmt}`);
+  dl(new Blob(["\ufeff" + L.join("\r\n")], { type:"text/plain;charset=utf-8" }), "EXP_compatibility_report.txt");
+  log("已輸出相容性檢查報告");
+};
+
+/* --- 設定表格 --- */
+function renderCfg(){
+  $("#cfgLib").value = CFG.lib; $("#cfgClass").value = CFG.cls;
+  $("#cfgNC").value = CFG.nc;   $("#cfgAssy").value = CFG.assy;
+  $("#cfgClear").value = CFG.clear;
+  if (!CFG.fill) CFG.fill = structuredClone(DEF_FILL);
+  $("#cfgLoose").checked = !!CFG.avlLoose;
+  renderFill();
+  $("#cfgFixQuote").checked = !!CFG.fixQuote;
+
+  const t1 = $("#tExpFp");
+  t1.innerHTML = "<tr><th style='width:34%'>EXP 封裝名稱</th><th style='width:22%'>類別</th><th style='width:26%'>尺寸代碼</th><th>　</th></tr>";
+  CFG.expFp.forEach((row, i) => {
+    const tr = t1.insertRow();
+    tr.innerHTML =
+      `<td><input value="${esc(row[0])}" data-k="expFp" data-i="${i}" data-j="0"></td>` +
+      `<td>${sel(row[1], i)}</td>` +
+      `<td><input value="${esc(row[2])}" data-k="expFp" data-i="${i}" data-j="2" placeholder="留空=不換料"></td>` +
+      `<td style="text-align:center"><button class="sm" data-del="expFp" data-i="${i}">刪除</button></td>`;
+  });
+  const t2 = $("#tAvlFp");
+  t2.innerHTML = "<tr><th style='width:56%'>AVL 封裝名稱</th><th style='width:28%'>尺寸代碼</th><th>　</th></tr>";
+  CFG.avlFp.forEach((row, i) => {
+    const tr = t2.insertRow();
+    tr.innerHTML =
+      `<td><input value="${esc(row[0])}" data-k="avlFp" data-i="${i}" data-j="0"></td>` +
+      `<td><input value="${esc(row[1])}" data-k="avlFp" data-i="${i}" data-j="1"></td>` +
+      `<td style="text-align:center"><button class="sm" data-del="avlFp" data-i="${i}">刪除</button></td>`;
+  });
+  const t3 = $("#tCat");
+  t3.innerHTML = "<tr><th style='width:10%'>處理</th><th style='width:14%'>類別</th><th style='width:30%'>EXP Source Part</th><th style='width:20%'>AVL Value 前綴</th><th>預設 Source Package</th></tr>";
+  CFG.cats.forEach((c, i) => {
+    const tr = t3.insertRow();
+    tr.innerHTML =
+      `<td style="text-align:center"><input type="checkbox" ${c.on?"checked":""} data-cat="${i}" data-f="on"></td>` +
+      `<td>${esc(c.name)}</td>` +
+      `<td><input value="${esc(c.sym)}" data-cat="${i}" data-f="sym"></td>` +
+      `<td><input value="${esc(c.pre)}" data-cat="${i}" data-f="pre"></td>` +
+      `<td><input value="${esc(c.pkg)}" data-cat="${i}" data-f="pkg"></td>`;
+  });
+}
+const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+function sel(v, i){
+  return `<select data-k="expFp" data-i="${i}" data-j="1">` +
+    CFG.cats.map(c => `<option value="${c.key}" ${c.key===v?"selected":""}>${esc(c.name)}</option>`).join("") +
+    `</select>`;
+}
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.dataset.k){ CFG[t.dataset.k][+t.dataset.i][+t.dataset.j] = t.value; }
+  else if (t.dataset.cat != null){
+    const c = CFG.cats[+t.dataset.cat];
+    c[t.dataset.f] = (t.type === "checkbox") ? t.checked : t.value;
+  }
+  else if (t.id === "cfgLib") CFG.lib = t.value;
+  else if (t.id === "cfgClass") CFG.cls = t.value;
+  else if (t.id === "cfgNC") CFG.nc = t.value;
+  else if (t.id === "cfgAssy") CFG.assy = t.value;
+  else if (t.id === "cfgClear") CFG.clear = t.value;
+  else if (t.id === "cfgFixQuote") CFG.fixQuote = t.checked;
+});
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.tagName === "SELECT" && t.dataset.k) CFG[t.dataset.k][+t.dataset.i][+t.dataset.j] = t.value;
+});
+document.addEventListener("click", e => {
+  const d = e.target.dataset.del;
+  if (d){ CFG[d].splice(+e.target.dataset.i, 1); renderCfg(); }
+});
+$("#addFill").onclick = () => { CFG.fill.push(["", "avl", "item"]); renderFill(); };
+$("#addExpFp").onclick = () => { CFG.expFp.push(["", "R", ""]); renderCfg(); };
+$("#addAvlFp").onclick = () => { CFG.avlFp.push(["", ""]); renderCfg(); };
+$("#btnCfgReset").onclick = () => { CFG = structuredClone(DEF_CFG); renderCfg(); log("設定已回復預設值"); };
+$("#btnCfgExport").onclick = () => dl(new Blob([JSON.stringify(CFG, null, 2)], {type:"application/json"}), "BOM_tool_settings.json");
+$("#btnCfgImport").onclick = () => $("#fCfg").click();
+$("#fCfg").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try{ CFG = Object.assign(structuredClone(DEF_CFG), JSON.parse(await f.text())); renderCfg(); log("設定已匯入：" + f.name); }
+  catch(err){ log("設定檔讀取失敗：" + err.message, "err"); }
+};
+
+/* --- 執行 --- */
+$("#btnRun").onclick = () => {
+  try{
+    $("#log").textContent = "";
+    const t0 = performance.now();
+    const { pool, missing } = buildPool(AVLROWS, CFG);
+    if (missing.length) throw new Error("元件庫必要欄位未指定：" + missing.join("、"));
+    log(`元件庫可比對料件：${pool.length} 筆`);
+    const noSize = pool.filter(p => !p.size).length;
+    if (noSize) log(`其中 ${noSize} 筆無法判定封裝尺寸，不會被選用（可在「AVL 端補充」補上）`, "warn");
+
+    const exp = { design:EXPDATA.design, hdr:EXPDATA.hdr, rows:EXPDATA.rows, ix:EXPDATA.ix,
+                  ixLow:EXPDATA.ixLow, K:EXPDATA.K, how:EXPDATA.how };
+    RESULT = run(exp, pool, CFG);
+    OUTTEXT = buildExp({ design:exp.design, hdr:exp.hdr, rows:RESULT.rows }, CFG.fixQuote);
+    const bad = validateExp(OUTTEXT, exp.hdr.length);
+    log(`比對完成，耗時 ${(performance.now()-t0).toFixed(0)} ms`);
+    render(bad);
+    $("#cardOut").classList.remove("hide");
+    $("#cardOut").scrollIntoView({ behavior:"smooth", block:"start" });
+  } catch(e){ log(e.message, "err"); alert("執行失敗：" + e.message); }
+};
+
+function render(bad){
+  const R = RESULT.report;
+  const nCh = R.filter(r => r.result === "已更換").length;
+  const nWarn = R.filter(r => r.result === "已更換" && (r.flags.includes("⚠") || /Status=(EOL|NF)/.test(r.flags))).length;
+  const nKeep = R.filter(r => r.result === "未更換").length;
+  const tiles = [
+    ["EXP 零件總數", EXPDATA.rows.length, ""],
+    ["納入比對", R.length, ""],
+    ["已更換", nCh, "ok"],
+    ["需人工確認", nWarn, "warn"],
+    ["未更換", nKeep, "keep"],
+    ["未處理 (IC/連接器等)", EXPDATA.rows.length - R.length, ""]
+  ];
+  $("#tiles").innerHTML = tiles.map(([l,n,c]) =>
+    `<div class="tile ${c}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+
+  const reasons = {};
+  for (const r of R) if (r.result === "未更換") reasons[r.reason] = (reasons[r.reason]||0)+1;
+  const top = Object.entries(reasons).sort((a,b)=>b[1]-a[1]).slice(0,4)
+    .map(([k,v]) => `${k} <b>${v}</b> 筆`).join("　·　");
+  $("#checkBox").innerHTML =
+    (bad.length
+      ? `<div class="note bad"><b>格式檢查未通過</b>：第 ${bad.slice(0,6).map(b=>b.line).join(", ")}${bad.length>6?" …":""} 行欄位數或引號數不符 (共 ${bad.length} 行)。匯入 OrCAD 可能出現 ORCAP-1704，請開啟「自動修正孤立雙引號」再執行一次。</div>`
+      : `<div class="note good"><b>格式檢查通過</b>：全檔每行皆為 ${EXPDATA.hdr.length} 欄、引號成對、無 TAB／換行殘留，可直接匯回 OrCAD。</div>`) +
+    (top ? `<div class="note">未更換原因：${top}</div>` : "");
+
+  const cats = [...new Set(R.map(r => r.catName))];
+  $("#fltCat").innerHTML = `<option value="">全部類別</option>` + cats.map(c=>`<option>${esc(c)}</option>`).join("");
+  SHOWN = 300; renderTable();
+  log(`已更換 ${nCh} 筆　需確認 ${nWarn} 筆　未更換 ${nKeep} 筆`);
+}
+const RES_COLS = [["Part Reference","ref"],["類別","catName"],["結果","result"],
+  ["原 Value","oldValue"],["原封裝","oldFp"],["原 Part number","oldPn"],
+  ["新 Value","newValue"],["新 ITEM_NUMBER","newItem"],["新 MFG_PN","newMfgPn"],
+  ["新封裝","newFp"],["Status","newStatus"],["候選","ncand"],["差異註記","flags"],["未更換原因","reason"]];
+function filtered(){
+  const fr = $("#fltResult").value, fc = $("#fltCat").value, kw = $("#fltKw").value.trim().toUpperCase();
+  return RESULT.report.filter(r => {
+    if (fr === "需確認") { if (!(r.result === "已更換" && (r.flags.includes("⚠") || /Status=(EOL|NF)/.test(r.flags)))) return false; }
+    else if (fr && r.result !== fr) return false;
+    if (fc && r.catName !== fc) return false;
+    if (kw){
+      const blob = [r.ref, r.oldValue, r.oldFp, r.oldPn, r.newValue, r.newItem, r.newMfgPn, r.newFp, r.newDesc].join(" ").toUpperCase();
+      if (!blob.includes(kw)) return false;
+    }
+    return true;
+  });
+}
+function renderTable(){
+  const rows = filtered(), show = rows.slice(0, SHOWN), t = $("#tRes");
+  t.innerHTML = "<tr>" + RES_COLS.map(c => `<th>${c[0]}</th>`).join("") + "</tr>";
+  for (const r of show){
+    const tr = t.insertRow();
+    const warn = r.result === "已更換" && (r.flags.includes("⚠") || /Status=(EOL|NF)/.test(r.flags));
+    tr.className = r.result === "未更換" ? "keep" : warn ? "warn" : "";
+    tr.innerHTML = RES_COLS.map(([, k]) => {
+      let v = r[k] ?? "";
+      if (k === "result"){
+        const cls = r.result === "未更換" ? "keep" : warn ? "warn" : "ok";
+        v = `<span class="pill ${cls}">${warn ? "需確認" : r.result}</span>`;
+      } else v = esc(v);
+      return `<td>${v}</td>`;
+    }).join("");
+  }
+  $("#tblCnt").textContent = `顯示 ${show.length} / ${rows.length} 筆`;
+  $("#btnMore").classList.toggle("hide", show.length >= rows.length);
+}
+["fltResult","fltCat"].forEach(id => $("#"+id).onchange = () => { SHOWN = 300; renderTable(); });
+$("#fltKw").oninput = () => { SHOWN = 300; renderTable(); };
+$("#btnMore").onclick = () => { SHOWN += 300; renderTable(); };
+
+/* --- 下載 --- */
+function dl(blob, name){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+$("#btnDlExp").onclick = () => {
+  if (!OUTTEXT) return;
+  dl(new Blob([encodeOut(OUTTEXT, EXPDATA.enc)], { type:"application/octet-stream" }), OUTNAME);
+  log(`已輸出 ${OUTNAME}（${EXPDATA.enc} 編碼、CRLF 換行）`);
+};
+$("#btnDlCsv").onclick = () => {
+  if (!RESULT) return;
+  const cols = [["Part Reference","ref"],["類別","catName"],["結果","result"],["原 Value","oldValue"],
+    ["原 PCB Footprint","oldFp"],["原 Description","oldDesc"],["原 Part number","oldPn"],
+    ["新 Value","newValue"],["新 ITEM_NUMBER","newItem"],["新 MFG_NAME","newMfg"],["新 MFG_PN","newMfgPn"],
+    ["新 PCB Footprint","newFp"],["新 Source Package","newPkg"],["Status","newStatus"],
+    ["新 Description","newDesc"],["候選數","ncand"],["差異註記","flags"],["其他候選料","alts"],["未更換原因","reason"]];
+  const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  const lines = [cols.map(c => q(c[0])).join(",")];
+  for (const r of RESULT.report) lines.push(cols.map(c => q(r[c[1]])).join(","));
+  dl(new Blob(["﻿" + lines.join("\r\n")], { type:"text/csv;charset=utf-8" }), "BOM_change_report.csv");
+  log("已輸出比對報告 CSV (UTF-8 BOM，Excel 可直接開啟)");
+};
+
+/* --- 啟動 --- */
+CFG.fill = structuredClone(DEF_FILL);
+renderCfg(); readyCheck();
+log("工具就緒。所有運算都在本機瀏覽器完成，檔案不會上傳。");
+if (typeof DecompressionStream === "undefined")
+  log("此瀏覽器不支援 DecompressionStream，無法直接讀 .xlsx，請改用 Chrome/Edge 103+ 或將元件庫另存為 CSV。", "warn");
+</script>
+</body>
+</html>
